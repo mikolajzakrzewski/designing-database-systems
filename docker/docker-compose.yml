@@ -1,0 +1,15 @@
+name: psbd
+services:
+  pg:
+    image: postgres:17
+    restart: always
+    environment:
+      POSTGRES_USER: psbd
+      POSTGRES_PASSWORD: psbdpassword
+      POSTGRES_DB: polish-climbing-association
+    ports:
+      - "5433:5432"
+    volumes:
+      - pg:/var/lib/postgresql/data
+volumes:
+  pg:
