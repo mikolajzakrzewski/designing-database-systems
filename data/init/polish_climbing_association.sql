@@ -99,3 +99,17 @@ CREATE TABLE posts (
     user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
     content VARCHAR(1000) NOT NULL
 );
+
+CREATE TABLE news (
+    news_id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    content VARCHAR(1000) NOT NULL
+);
+
+CREATE TABLE bug_reports (
+    bug_report_id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    content VARCHAR(1000) NOT NULL
+);
