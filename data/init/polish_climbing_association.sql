@@ -60,8 +60,6 @@ CREATE TABLE reviews (
 
 CREATE TABLE certificates (
     certificate_id SERIAL PRIMARY KEY,
-    user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
-    event_id INT REFERENCES events(event_id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,
     description VARCHAR(1000)
 );
