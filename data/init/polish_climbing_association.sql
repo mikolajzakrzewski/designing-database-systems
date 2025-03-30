@@ -10,7 +10,8 @@ CREATE TABLE users (
     first_name VARCHAR(255) NOT NULL,
     last_name VARCHAR(255) NOT NULL,
     email VARCHAR(255) UNIQUE NOT NULL,
-    rating_point FLOAT
+    rating_point FLOAT,
+    passwordHash VARCHAR(255) NOT NULL
 );
 
 CREATE TABLE roles (
