@@ -2,7 +2,8 @@ name: psbd
 services:
   pg:
     image: postgres:17
-    restart: no
+    container_name: postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: psbd
       POSTGRES_PASSWORD: psbdpassword
@@ -11,5 +12,20 @@ services:
       - "5433:5432"
     volumes:
       - pg:/var/lib/postgresql/data
+
+  mongo:
+    image: mongo:noble
+    container_name: mongo
+    restart: unless-stopped
+    ports:
+    - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: psbd
+      MONGO_INITDB_ROOT_PASSWORD: psbdpassword
+      MONGO_INITDB_DATABASE: polish-climbing-association
+    volumes:
+      - mongo_data:/data/db
+
 volumes:
   pg:
+  mongo_data:
