@@ -62,32 +62,7 @@ db.createCollection("events", {
                 // Expedition fields
                 difficulty: { bsonType: "string" },
                 mountain_chain: { bsonType: "string" }
-            },
-            allOf: [
-                {
-                    if: { properties: { type: { const: "Competition" } } },
-                    then: {
-                        required: ["discipline"],
-                        properties: {
-                            discipline: {
-                                enum: ["Lead", "Bouldering", "Speed", "Combined"]
-                            }
-                        }
-                    }
-                },
-                {
-                    if: { properties: { type: { const: "Training" } } },
-                    then: {
-                        required: ["training_type"]
-                    }
-                },
-                {
-                    if: { properties: { type: { const: "Expedition" } } },
-                    then: {
-                        required: ["difficulty", "mountain_chain"]
-                    }
-                }
-            ]
+            }
         }
     }
 });
