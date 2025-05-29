@@ -11,6 +11,7 @@ def create_app():
     app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://psbd:psbdpassword@localhost:5433/polish-climbing-association'
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
     app.config['JWT_SECRET_KEY'] = 'super-secret-key'
+    app.config['JWT_VERIFY_SUB'] = False
     app.config['JWT_ACCESS_TOKEN_EXPIRES'] = timedelta(days=1)
 
     db.init_app(app)

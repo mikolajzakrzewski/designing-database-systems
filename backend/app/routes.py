@@ -12,8 +12,13 @@ api_bp = Blueprint('api', __name__)
 @api_bp.route('/register', methods=['POST'])
 def register():
     data = request.json
+    required_fields = ['first_name', 'last_name', 'email', 'password']
+    if not all(key in data for key in required_fields):
+        return jsonify({'msg': f'Missing required fields {", ".join(required_fields)}'}), 400
+
     if User.query.filter_by(email=data['email']).first():
         return jsonify({'msg': 'User already exists'}), 409
+
     hashed_pw = bcrypt.generate_password_hash(data['password']).decode('utf-8')
     new_user = User(
         first_name=data['first_name'],
@@ -35,18 +40,23 @@ def login():
     if user and bcrypt.check_password_hash(user.passwordHash, data['password']):
         access_token = create_access_token(identity=user.user_id)
         return jsonify(access_token=access_token)
+
     return jsonify({'msg': 'Bad credentials'}), 401
 
 
 @api_bp.route('/users/<int:user_id>', methods=['PUT'])
 @jwt_required()
 def update_user(user_id):
+    if get_jwt_identity() != user_id:
+        return jsonify({'msg': 'Unauthorized to update this user'}), 403
+
     data = request.json
     user = User.query.get_or_404(user_id)
 
     for field in ['first_name', 'last_name', 'email', 'rating_points', 'club_id']:
         if field in data:
             setattr(user, field, data[field])
+
     if 'password' in data:
         user.passwordHash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
 
@@ -58,6 +68,10 @@ def update_user(user_id):
 @jwt_required()
 def add_event():
     data = request.json
+    required_fields = ['name', 'location', 'start_time', 'end_time', 'type', 'participation_cost']
+    if not all(field in data for field in required_fields):
+        return jsonify({'msg': f'Missing required fields {", ".join(required_fields)}'}), 400
+
     try:
         start_time = datetime.fromisoformat(data['start_time'])
         end_time = datetime.fromisoformat(data['end_time'])
@@ -66,6 +80,12 @@ def add_event():
 
     if end_time <= start_time:
         return jsonify({'msg': 'End time must be after start time'}), 400
+
+    if data['type'] not in ['Competition', 'Training', 'Expedition']:
+        return jsonify({'msg': 'Invalid event type. Must be one of: Competition, Training, Expedition'}), 400
+
+    if not isinstance(data['participation_cost'], (int, float)) or data['participation_cost'] < 0:
+        return jsonify({'msg': 'Participation cost must be a non-negative number'}), 400
 
     event = Event(
         name=data['name'],
@@ -115,18 +135,31 @@ def get_event_by_id(event_id):
 @api_bp.route('/events/<int:event_id>', methods=['PUT'])
 @jwt_required()
 def update_event(event_id):
-    data = request.json
     event = Event.query.get_or_404(event_id)
+
+    if event.is_archived:
+        return jsonify({'msg': 'Archived events cannot be modified'}), 403
+
+    data = request.json
 
     for field in ['name', 'description', 'location', 'type']:
         if field in data:
             setattr(event, field, data[field])
+
     if 'participation_cost' in data:
+        if not isinstance(data['participation_cost'], (int, float)) or data['participation_cost'] < 0:
+            return jsonify({'msg': 'Participation cost must be a non-negative number'}), 400
+
         event.participation_cost = data['participation_cost']
+
     if 'start_time' in data:
         event.start_time = datetime.fromisoformat(data['start_time'])
+
     if 'end_time' in data:
         event.end_time = datetime.fromisoformat(data['end_time'])
+        if event.end_time <= event.start_time:
+            return jsonify({'msg': 'End time must be after start time'}), 400
+
     if 'is_archived' in data:
         event.is_archived = data['is_archived']
 
@@ -139,6 +172,15 @@ def update_event(event_id):
 def register_event():
     user_id = get_jwt_identity()
     data = request.json
+
+    event = Event.query.get_or_404(data['event_id'])
+    if event.is_archived:
+        return jsonify({'msg': 'Cannot register for an archived event'}), 400
+
+    existing = EventUser.query.filter_by(user_id=user_id, event_id=data['event_id']).first()
+    if existing:
+        return jsonify({'msg': 'User already registered for this event'}), 409
+
     participation = EventUser(
         user_id=user_id,
         event_id=data['event_id'],
