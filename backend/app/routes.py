@@ -1,0 +1,149 @@
+from flask import Blueprint, request, jsonify
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from datetime import datetime
+from backend.app.db import db
+from backend.app.bcrypt import bcrypt
+from backend.app.models import User, Event, EventUser
+
+
+api_bp = Blueprint('api', __name__)
+
+
+@api_bp.route('/register', methods=['POST'])
+def register():
+    data = request.json
+    if User.query.filter_by(email=data['email']).first():
+        return jsonify({'msg': 'User already exists'}), 409
+    hashed_pw = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+    new_user = User(
+        first_name=data['first_name'],
+        last_name=data['last_name'],
+        email=data['email'],
+        passwordHash=hashed_pw,
+        rating_points=0.0,
+        club_id=data.get('club_id')
+    )
+    db.session.add(new_user)
+    db.session.commit()
+    return jsonify({'msg': 'User registered successfully'})
+
+
+@api_bp.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    user = User.query.filter_by(email=data['email']).first()
+    if user and bcrypt.check_password_hash(user.passwordHash, data['password']):
+        access_token = create_access_token(identity=user.user_id)
+        return jsonify(access_token=access_token)
+    return jsonify({'msg': 'Bad credentials'}), 401
+
+
+@api_bp.route('/users/<int:user_id>', methods=['PUT'])
+@jwt_required()
+def update_user(user_id):
+    data = request.json
+    user = User.query.get_or_404(user_id)
+
+    for field in ['first_name', 'last_name', 'email', 'rating_points', 'club_id']:
+        if field in data:
+            setattr(user, field, data[field])
+    if 'password' in data:
+        user.passwordHash = bcrypt.generate_password_hash(data['password']).decode('utf-8')
+
+    db.session.commit()
+    return jsonify({'msg': 'User updated successfully'})
+
+
+@api_bp.route('/add_event', methods=['POST'])
+@jwt_required()
+def add_event():
+    data = request.json
+    try:
+        start_time = datetime.fromisoformat(data['start_time'])
+        end_time = datetime.fromisoformat(data['end_time'])
+    except ValueError:
+        return jsonify({'msg': 'Invalid date format. Use ISO format (YYYY-MM-DDTHH:MM:SS)'}), 400
+
+    if end_time <= start_time:
+        return jsonify({'msg': 'End time must be after start time'}), 400
+
+    event = Event(
+        name=data['name'],
+        description=data.get('description'),
+        location=data['location'],
+        start_time=start_time,
+        end_time=end_time,
+        type=data['type'],
+        participation_cost=data['participation_cost'],
+        is_archived=data.get('is_archived', False)
+    )
+    db.session.add(event)
+    db.session.commit()
+    return jsonify({'msg': 'Event created', 'event_id': event.event_id}), 201
+
+
+@api_bp.route('/events', methods=['GET'])
+def get_all_events():
+    events = Event.query.all()
+    return jsonify([{
+        'event_id': e.event_id,
+        'name': e.name,
+        'description': e.description,
+        'location': e.location,
+        'start_time': e.start_time.isoformat(),
+        'end_time': e.end_time.isoformat(),
+        'type': e.type,
+        'participation_cost': float(e.participation_cost)
+    } for e in events])
+
+
+@api_bp.route('/events/<int:event_id>', methods=['GET'])
+def get_event_by_id(event_id):
+    event = Event.query.get_or_404(event_id)
+    return jsonify({
+        'event_id': event.event_id,
+        'name': event.name,
+        'description': event.description,
+        'location': event.location,
+        'start_time': event.start_time.isoformat(),
+        'end_time': event.end_time.isoformat(),
+        'type': event.type,
+        'participation_cost': float(event.participation_cost)
+    })
+
+
+@api_bp.route('/events/<int:event_id>', methods=['PUT'])
+@jwt_required()
+def update_event(event_id):
+    data = request.json
+    event = Event.query.get_or_404(event_id)
+
+    for field in ['name', 'description', 'location', 'type']:
+        if field in data:
+            setattr(event, field, data[field])
+    if 'participation_cost' in data:
+        event.participation_cost = data['participation_cost']
+    if 'start_time' in data:
+        event.start_time = datetime.fromisoformat(data['start_time'])
+    if 'end_time' in data:
+        event.end_time = datetime.fromisoformat(data['end_time'])
+    if 'is_archived' in data:
+        event.is_archived = data['is_archived']
+
+    db.session.commit()
+    return jsonify({'msg': 'Event updated successfully'})
+
+
+@api_bp.route('/register_event', methods=['POST'])
+@jwt_required()
+def register_event():
+    user_id = get_jwt_identity()
+    data = request.json
+    participation = EventUser(
+        user_id=user_id,
+        event_id=data['event_id'],
+        participation_type=data['participation_type']
+    )
+    db.session.add(participation)
+    db.session.commit()
+    return jsonify({'msg': 'Successfully registered for event'})

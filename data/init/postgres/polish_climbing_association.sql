@@ -34,6 +34,7 @@ CREATE TABLE IF NOT EXISTS events (
     end_time TIMESTAMP NOT NULL,
     type VARCHAR(50) NOT NULL CHECK (type IN ('Competition', 'Training', 'Expedition')),
     participation_cost DECIMAL(10,2) CHECK (participation_cost >= 0),
+    is_archived BOOLEAN DEFAULT FALSE,
     CHECK (end_time > start_time)
 );
 
