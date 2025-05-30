@@ -1,12 +1,27 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import datetime
+from functools import wraps
 from backend.app.db import db
 from backend.app.bcrypt import bcrypt
-from backend.app.models import User, Event, EventUser
+from backend.app.models import User, Role, UserRole, Event, EventUser
 
 
 api_bp = Blueprint('api', __name__)
+
+
+def admin_required(fn):
+    @wraps(fn)
+    @jwt_required()
+    def wrapper(*args, **kwargs):
+        user_id = get_jwt_identity()
+        admin_role = Role.query.filter_by(role_name='admin').first()
+        if not admin_role or not UserRole.query.filter_by(user_id=user_id, role_id=admin_role.role_id).first():
+            return jsonify({'msg': 'Admin privileges required'}), 403
+
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 @api_bp.route('/register', methods=['POST'])
@@ -47,7 +62,7 @@ def login():
 @api_bp.route('/users/<int:user_id>', methods=['PUT'])
 @jwt_required()
 def update_user(user_id):
-    if get_jwt_identity() != user_id:
+    if get_jwt_identity() != user_id and not UserRole.query.filter_by(user_id=get_jwt_identity(), role_id=Role.query.filter_by(role_name='admin').first().role_id).first():
         return jsonify({'msg': 'Unauthorized to update this user'}), 403
 
     data = request.json
@@ -65,7 +80,7 @@ def update_user(user_id):
 
 
 @api_bp.route('/add_event', methods=['POST'])
-@jwt_required()
+@admin_required
 def add_event():
     data = request.json
     required_fields = ['name', 'location', 'start_time', 'end_time', 'type', 'participation_cost']
@@ -133,7 +148,7 @@ def get_event_by_id(event_id):
 
 
 @api_bp.route('/events/<int:event_id>', methods=['PUT'])
-@jwt_required()
+@admin_required
 def update_event(event_id):
     event = Event.query.get_or_404(event_id)
 
@@ -189,3 +204,22 @@ def register_event():
     db.session.add(participation)
     db.session.commit()
     return jsonify({'msg': 'Successfully registered for event'})
+
+
+@api_bp.route('/my_events', methods=['GET'])
+@jwt_required()
+def get_my_events():
+    user_id = get_jwt_identity()
+    events = EventUser.query.filter_by(user_id=user_id).all()
+    result = []
+    for entry in events:
+        event = Event.query.get(entry.event_id)
+        result.append({
+            'event_id': event.event_id,
+            'event_name': event.name,
+            'participation_type': entry.participation_type,
+            'start_time': event.start_time.isoformat(),
+            'end_time': event.end_time.isoformat(),
+            'location': event.location
+        })
+    return jsonify(result)

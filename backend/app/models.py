@@ -7,6 +7,7 @@ class Club(db.Model):
     club_name = db.Column(db.String(255), nullable=False)
     location = db.Column(db.String(255), nullable=False)
 
+
 class User(db.Model):
     __tablename__ = 'users'
     user_id = db.Column(db.Integer, primary_key=True)
@@ -16,6 +17,20 @@ class User(db.Model):
     email = db.Column(db.String(255), unique=True, nullable=False)
     rating_points = db.Column(db.Float)
     passwordHash = db.Column(db.String(255), nullable=False)
+
+
+class Role(db.Model):
+    __tablename__ = 'roles'
+    role_id = db.Column(db.Integer, primary_key=True)
+    role_name = db.Column(db.String(255), unique=True, nullable=False)
+
+
+class UserRole(db.Model):
+    __tablename__ = 'user_role'
+    unique_id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.user_id', ondelete='CASCADE'))
+    role_id = db.Column(db.Integer, db.ForeignKey('roles.role_id', ondelete='CASCADE'))
+
 
 class Event(db.Model):
     __tablename__ = 'events'
@@ -28,6 +43,7 @@ class Event(db.Model):
     type = db.Column(db.String(50), nullable=False)
     participation_cost = db.Column(db.Numeric(10, 2))
     is_archived = db.Column(db.Boolean, default=False)
+
 
 class EventUser(db.Model):
     __tablename__ = 'event_user'
