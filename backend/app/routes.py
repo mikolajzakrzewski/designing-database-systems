@@ -59,12 +59,25 @@ def login():
     return jsonify({'msg': 'Bad credentials'}), 401
 
 
-@api_bp.route('/users/<int:user_id>', methods=['PUT'])
+@api_bp.route('/profile', methods=['GET'])
 @jwt_required()
-def update_user(user_id):
-    if get_jwt_identity() != user_id and not UserRole.query.filter_by(user_id=get_jwt_identity(), role_id=Role.query.filter_by(role_name='admin').first().role_id).first():
-        return jsonify({'msg': 'Unauthorized to update this user'}), 403
+def get_profile():
+    user_id = get_jwt_identity()
+    user = User.query.get_or_404(user_id)
+    return jsonify({
+        'user_id': user.user_id,
+        'first_name': user.first_name,
+        'last_name': user.last_name,
+        'email': user.email,
+        'rating_points': float(user.rating_points),
+        'club_id': user.club_id
+    })
 
+
+@api_bp.route('/profile', methods=['PUT'])
+@jwt_required()
+def update_profile():
+    user_id = get_jwt_identity()
     data = request.json
     user = User.query.get_or_404(user_id)
 
@@ -77,6 +90,34 @@ def update_user(user_id):
 
     db.session.commit()
     return jsonify({'msg': 'User updated successfully'})
+
+
+@api_bp.route('/profile/roles', methods=['GET'])
+@jwt_required()
+def get_user_roles():
+    user_id = get_jwt_identity()
+    roles = UserRole.query.filter_by(user_id=user_id).all()
+    role_names = [Role.query.get(role.role_id).role_name for role in roles]
+    return jsonify({'roles': role_names})
+
+
+@api_bp.route('/profile/events', methods=['GET'])
+@jwt_required()
+def get_user_events():
+    user_id = get_jwt_identity()
+    events = EventUser.query.filter_by(user_id=user_id).all()
+    result = []
+    for entry in events:
+        event = Event.query.get(entry.event_id)
+        result.append({
+            'event_id': event.event_id,
+            'event_name': event.name,
+            'participation_type': entry.participation_type,
+            'start_time': event.start_time.isoformat(),
+            'end_time': event.end_time.isoformat(),
+            'location': event.location
+        })
+    return jsonify(result)
 
 
 @api_bp.route('/add_event', methods=['POST'])
@@ -204,22 +245,3 @@ def register_event():
     db.session.add(participation)
     db.session.commit()
     return jsonify({'msg': 'Successfully registered for event'})
-
-
-@api_bp.route('/my_events', methods=['GET'])
-@jwt_required()
-def get_my_events():
-    user_id = get_jwt_identity()
-    events = EventUser.query.filter_by(user_id=user_id).all()
-    result = []
-    for entry in events:
-        event = Event.query.get(entry.event_id)
-        result.append({
-            'event_id': event.event_id,
-            'event_name': event.name,
-            'participation_type': entry.participation_type,
-            'start_time': event.start_time.isoformat(),
-            'end_time': event.end_time.isoformat(),
-            'location': event.location
-        })
-    return jsonify(result)
