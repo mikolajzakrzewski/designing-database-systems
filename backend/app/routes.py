@@ -2,9 +2,9 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 from datetime import datetime
 from functools import wraps
-from backend.app.db import db
-from backend.app.bcrypt import bcrypt
-from backend.app.models import User, Role, UserRole, Event, EventUser
+from app.db import db
+from app.bcrypt import bcrypt
+from app.models import User, Role, UserRole, Event, EventUser
 
 
 api_bp = Blueprint('api', __name__)

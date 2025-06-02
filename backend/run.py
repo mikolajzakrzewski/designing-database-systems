@@ -1,7 +1,7 @@
-from backend.app import create_app
-from backend.app.db import db
-from backend.app.bcrypt import bcrypt
-from backend.app.models import User, Role, UserRole
+from app import create_app
+from app.db import db
+from app.bcrypt import bcrypt
+from app.models import User, Role, UserRole
 
 
 app = create_app()

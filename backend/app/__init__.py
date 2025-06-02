@@ -1,8 +1,8 @@
 from flask import Flask
-from backend.app.db import db
-from backend.app.bcrypt import bcrypt
-from backend.app.jwt import jwt
-from backend.app.routes import api_bp
+from app.db import db
+from app.bcrypt import bcrypt
+from app.jwt import jwt
+from app.routes import api_bp
 from datetime import timedelta
 
 
