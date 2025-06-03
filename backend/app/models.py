@@ -1,4 +1,5 @@
 from app.db import db
+from sqlalchemy import LargeBinary
 
 
 class Club(db.Model):
@@ -43,6 +44,8 @@ class Event(db.Model):
     type = db.Column(db.String(50), nullable=False)
     participation_cost = db.Column(db.Numeric(10, 2))
     is_archived = db.Column(db.Boolean, default=False)
+    difficulty = db.Column(db.String(50))  # beginner / intermediate / advanced
+    picture = db.Column(LargeBinary) 
 
 
 class EventUser(db.Model):

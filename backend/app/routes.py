@@ -5,6 +5,7 @@ from functools import wraps
 from app.db import db
 from app.bcrypt import bcrypt
 from app.models import User, Role, UserRole, Event, EventUser
+import base64
 
 
 api_bp = Blueprint('api', __name__)
@@ -169,7 +170,9 @@ def get_all_events():
         'start_time': e.start_time.isoformat(),
         'end_time': e.end_time.isoformat(),
         'type': e.type,
-        'participation_cost': float(e.participation_cost)
+        'participation_cost': float(e.participation_cost),
+        'difficulty': e.difficulty,
+        'picture': base64.b64encode(e.picture).decode('utf-8') if e.picture else None,
     } for e in events])
 
 
